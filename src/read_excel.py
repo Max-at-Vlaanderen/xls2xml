@@ -4,13 +4,11 @@ import xmlschema
 import pandas as pd
 import numpy as np
 from src.dfs_schema import ChoiceNode, SequenceNode, get_dfs_schema, get_XML_schema
-import traceback
 from pathlib import Path
 import os
 import warnings
 import dateutil.parser as parser
-from tqdm import tqdm
-
+from decimal import Decimal, getcontext
 from ordered_set import OrderedSet
 
 warnings.filterwarnings("ignore", message="Data Validation extension is not supported and will be removed")
@@ -70,8 +68,17 @@ def parse_time(t):
 
 
 def parse_float(f):
+    getcontext().prec = 26
+    f = str(f).replace(',', '.').replace(' ', '')
+    t = format(Decimal(f), '.50f').rstrip('0').rstrip('.')
+    if '.' not in t:
+        t += '.0'
+    return t
+
+
+def parse_double(f):
     if isinstance(f, str):
-        f = float(f.replace(',', '.'))
+        f = f.replace(',', '.').replace(' ', '')
 
     return float(f)
 
@@ -92,11 +99,11 @@ def clean_data(data, schema_node):
         return None
     else:
 
-        cleaner = {'java.lang.Boolean': lambda x: bool(x),
+        cleaner = {'java.lang.Boolean': lambda x: bool({'true': True, 'false': False}.get(x, x)),
                    'java.math.BigInteger': lambda x: int(x),
                    'java.sql.Date': parse_date,
                    'java.math.BigDecimal': parse_float,
-                   'java.lang.Double': parse_float,
+                   'java.lang.Double': parse_double,
                    'java.lang.String': lambda x: str(x),
                    'java.net.URI': lambda x: str(x),
                    'java.sql.Time': parse_time,
@@ -162,7 +169,7 @@ def get_partition(df, filter, current_lijst, node):
         if last_row is None or not all(
                 [(x == y or (isinstance(x, float) and math.isnan(x))) for x, y in zip(tuple(row), last_row)]):
             last_row = tuple(row)
-            possibilities.add(tuple(row))
+            possibilities.add(tuple(row.replace(np.nan, None)))
 
     pos2index = {pos: i for i, pos in enumerate(possibilities)}
     new_filters = [np.zeros(df.shape[0], dtype=bool) for _ in possibilities]
@@ -179,7 +186,7 @@ def get_partition(df, filter, current_lijst, node):
                 new_filters[prev_pos][i] = True
 
             else:
-                j = pos2index[tuple(row)]
+                j = pos2index[tuple(row.replace(np.nan, None))]
                 new_filters[j][i] = True
                 prev_row = tuple(row)
                 prev_pos = j
@@ -260,7 +267,7 @@ def data_node_to_json(data_node, schema_node):
     return [json_dict]
 
 
-def read_sheets(filename, sheets, xml_schema=None, mode='local', xsd_source='productie'):
+def read_sheets(filename, sheets, xml_schema=None, mode='local', xsd_source='productie', df_range=None):
     """
     Reads data from Excel sheets and generates filled XML.
 
@@ -294,6 +301,8 @@ def read_sheets(filename, sheets, xml_schema=None, mode='local', xsd_source='pro
 
         if sheet_available:
             try:
+                if df_range is not None:
+                    df = df.iloc[df_range[0]:df_range[1]]
                 base = root.get_specific_child(sheet)
                 partition = get_partition(df, np.ones(df.shape[0], dtype='bool'), [], base)
                 for part in tqdm(partition, 
@@ -332,7 +341,7 @@ def write_xml(xml, filename):
 
 
 def read_to_xml(input_filename, output_filename='./dist/result.xml', sheets=None, mode='local',
-                xsd_source='productie', project_root=None, xml_schema=None):
+                xsd_source='productie', project_root=None, xml_schema=None, df_range=None):
     """
     Reads data from Excel sheets and generates filled XML.
 
@@ -345,11 +354,12 @@ def read_to_xml(input_filename, output_filename='./dist/result.xml', sheets=None
         global PROJECT_ROOT
         PROJECT_ROOT = project_root
 
-    filled_xml = read_sheets(input_filename, sheets=sheets, mode=mode, xsd_source=xsd_source, xml_schema=xml_schema)
+    filled_xml = read_sheets(input_filename, sheets=sheets, mode=mode, xsd_source=xsd_source, xml_schema=xml_schema,
+                             df_range=df_range)
     write_xml(filled_xml, output_filename)
 
 
 if __name__ == '__main__':
-    # read_to_xml('../tests/data/filled_templates/bodem_template_full2.xlsx', '../dist/dev.xml', sheets=['bodemlocatie'])
-    read_to_xml('../data_voorbeeld/ovam_test.xlsx', '../dist/ovam_test.xml',
+    sheets = ['observatie']
+    read_to_xml(f'../data_voorbeeld/bod_opbouw2.xlsx', f'../dist/result2.xml',
                 xsd_source='productie')
