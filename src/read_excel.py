@@ -305,10 +305,7 @@ def read_sheets(filename, sheets, xml_schema=None, mode='local', xsd_source='pro
                     df = df.iloc[df_range[0]:df_range[1]]
                 base = root.get_specific_child(sheet)
                 partition = get_partition(df, np.ones(df.shape[0], dtype='bool'), [], base)
-                for part in tqdm(partition, 
-                        desc=f"Processing {sheet}", 
-                        unit=" nodes",
-                        leave=True):
+                for part in partition:
                     data_root.children[sheet].append(recursive_data_read(df[part], base, []))
             except ValueError:
                 print(f'Conversion of sheet {sheet} failed')

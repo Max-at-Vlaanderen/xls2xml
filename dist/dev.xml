@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns0:dov-schema xmlns:ns0="http://kern.schemas.dov.vlaanderen.be">
+    <bodemsite>
+        <naam>Test</naam>
+        <waarnemingsdatum>2025-09-01</waarnemingsdatum>
+        <beschrijving> Teste geometrie - WKT</beschrijving>
+        <geometrie>
+            <coordinatenstelsel>EPSG:31370</coordinatenstelsel>
+            <wkt>MultiPolygon (((148668.85628193 172906.99869534, 148688.83067648 172942.50873008, 148688.83067648 172942.50873008, 148719.40876195 172926.97308988, 148717.68257971 172922.28773807, 148739.62975396 172911.43744968, 148688.09088409 172810.82568457, 148636.55201421 172829.32049433, 148674.28142613 172904.77931816, 148668.85628193 172906.99869534)))</wkt>
+        </geometrie>
+        <auteur>
+            <bedrijf>
+                <naam>DOMG</naam>
+            </bedrijf>
+        </auteur>
+    </bodemsite>
+</ns0:dov-schema>
